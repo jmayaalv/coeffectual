@@ -60,18 +60,18 @@ Example:
 ```Clojure
 
 (ns example
-  (:require [coeffectual :refer [defcoeffectual]])
-  (:require [clojure.pprint :as pprint]))
+  (:require [coeffectual :refer [defcoeffectual]]))
 
-(defmulti my-multimethod (fn [ctx m]) (:type m)
+(defmulti my-multi (fn [_context m]
+               (:type m)))
 
-(defcoeffectual my-multimethod :foo
-  [ctx x]
-  {:y (constantly 10)
-   :z (fn [ctx x] (+ (:y ctx) x))}
-  (pprint/pprint (+ (:y ctx) (:z ctx) x)))
+(defcoeffectual my-multi :test
+  [ctx {:keys [x]}]
+  {:y (constantly 10)}
+  (+ x (:y ctx)))
 
-(my-multimethod {:type :foo} 5) ; Output: 25
+(m1 {} {:type :test :x 5}) => 15
+
 ```
 In this example:
 
