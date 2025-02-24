@@ -10,7 +10,7 @@ The defc macro defines regular functions with coeffects.
 
 Syntax:
 
-Clojure
+```Clojure
 
 (defc function-name
   [context-arg arg1 arg2 ...]
@@ -18,9 +18,10 @@ Clojure
    coeffect-key2 (fn [context-arg arg1 arg2 ...] ...)
    ...}
   body...)
+```
 Example:
 
-Clojure
+```Clojure
 
 (ns example
   (:require [coeffectual :refer [defc]]))
@@ -32,6 +33,7 @@ Clojure
   (+ (:y ctx) (:z ctx) x))
 
 (println (my-func {:initial-val 10} 5)) ; Output: 23
+```
 In this example:
 
 my-func takes a context map (ctx) and an argument x.
@@ -44,7 +46,7 @@ The defcoeffectual macro defines multimethods with coeffects.
 
 Syntax:
 
-Clojure
+```Clojure
 
 (defcoeffectual multimethod-name dispatch-val
   [context-arg arg1 arg2 ...]
@@ -52,9 +54,10 @@ Clojure
    coeffect-key2 (fn [context-arg arg1 arg2 ...] ...)
    ...}
   body...)
+```
 Example:
 
-Clojure
+```Clojure
 
 (ns example
   (:require [coeffectual :refer [defcoeffectual]])
@@ -69,6 +72,7 @@ Clojure
   (pprint/pprint (+ (:y ctx) (:z ctx) x)))
 
 (my-multimethod {:type :foo} 5) ; Output: 25
+```
 In this example:
 
 my-multimethod is a multimethod dispatched on the :type key.
