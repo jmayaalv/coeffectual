@@ -73,11 +73,7 @@ Example:
 (m1 {} {:type :test :x 5}) => 15
 
 ```
-In this example:
-
-my-multimethod is a multimethod dispatched on the :type key.
-defcoeffectual defines a method for the :foo dispatch value.
-The coeffects and function body work similarly to the defc macro.
+.
 
 ## Key Features
 Context Enrichment: Coeffects allow you to pre-process data or perform computations before the main function body is executed.
