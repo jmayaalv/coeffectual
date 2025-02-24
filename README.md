@@ -63,7 +63,7 @@ Example:
   (:require [coeffectual :refer [defcoeffectual]])
   (:require [clojure.pprint :as pprint]))
 
-(defmulti my-multimethod :type)
+(defmulti my-multimethod (fn [ctx m]) (:type m)
 
 (defcoeffectual my-multimethod :foo
   [ctx x]
