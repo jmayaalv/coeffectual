@@ -1,7 +1,6 @@
 (ns coeffectual.test.core-test
   (:require [clojure.test :refer [deftest is testing]]
-            [coeffectual.core :refer [defc defcoeffectual]]))
-
+            [coeffectual.core :refer [defc defcoeffectual] :as c]))
 
 (defc f1
   [ctx x]
@@ -18,6 +17,18 @@
   {:z (constantly 10)}
   (+ x y (:z ctx)))
 
+(defc f3
+  [ctx x y]
+  {:z (constantly 10)}
+  (+ x y (:z ctx)))
+
+(defc with-error
+  [ctx x y]
+  {:z                 (constantly (throw (ex-info "error" {})))
+   :coeffectual/error (fn [_error]
+                       :error)}
+  (+ x y (:z ctx)))
+
 
 (deftest test-defc
   (testing "basic"
@@ -27,10 +38,12 @@
   (testing "Coeffects execution order"
     (is (= 13 (f2 {} 5))))
   (testing "many args "
-    (is (= 22 (f3 {} 5 7)))))
+    (is (= 22 (f3 {} 5 7))))
+  (testing "with error"
+    (is (= :error (with-error {} 5 7)))))
 
 (defmulti m1 (fn [_context m]
-               (:type m)))m
+               (:type m)))
 
 (defmulti m2 (fn [_context m x]
                (:type m)))
@@ -50,6 +63,17 @@
   {:y (constantly 10)}
   (+ x y))
 
+(defcoeffectual m1 :test2
+  [{:keys [y]} {:keys [x]}]
+  {:y (constantly 10)}
+  (+ x y))
+
+(defcoeffectual m1 :error
+  [{:keys [y]} {:keys [x]}]
+  {:y                 (constantly (throw (ex-info "an error" {})))
+   :coeffectual/error (fn [_] :error)}
+  (+ x y))
+
 
 (deftest test-defcoeffectual
   (testing "basic"
@@ -57,4 +81,6 @@
   (testing "preserve context"
     (is (= 10 (m1 {:y 5} {:type :test :x 5}))))
   (testing "many args "
-    (is (= 22 (m2 {} {:type :test :x 5} 7)))))
+    (is (= 22 (m2 {} {:type :test :x 5} 7))))
+  (testing "error  "
+    (is (= :error (m1 {} {:type :error :x 5})))))

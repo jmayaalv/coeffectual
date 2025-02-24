@@ -40,7 +40,7 @@
          :body (s/+ any?)))
 
 (s/def ::defcoeffectual-args
-  (s/cat :name simple-symbol?
+  (s/cat :name symbol?
          :dispatch-val any?
          :docstring (s/? string?)
          :arglist ::fn-args
@@ -63,25 +63,36 @@
 
 
 (defn resolve-coeffects [args context coeffects]
-  (reduce (fn [ctx [k v]]
-            (merge { k (apply v (into [ctx] args))} ctx))
-          context
-          coeffects))
+  (->> coeffects
+       (reduce (fn [ctx [k v]]
+                 (merge { k (apply v (into [ctx] args))} ctx))
+           context)))
+
 
 
 (defmacro defc
   {:arglists '([name docstring? arglist coeffects? & body])}
   [& args]
-  #dbg (let [{:keys [name docstring arglist coeffects body] :as params}
-             (s/conform ::defc-args args)
-             arglist'  (s/unform ::fn-args arglist)
-             defdoc    (cond-> [] docstring (conj docstring))
-             coeffects (params->coeffects params)]
+  (let [{:keys [name docstring arglist coeffects body] :as params}
+        (s/conform ::defc-args args)
+        arglist'  (s/unform ::fn-args arglist)
+        defdoc    (cond-> [] docstring (conj docstring))
+        coeffects (params->coeffects params)
+        ctx-name  (second (first arglist))
+        body'     `[(let [~ctx-name (resolve-coeffects ~(vec (rest arglist'))
+                                                       ~ctx-name
+                                                       ~(dissoc coeffects :coeffectual/error))]
+
+                      ~@body)]
+        body' (if-let [error-handler (:coeffectual/error coeffects)]
+                [`(try ~@body'
+                       (catch Exception e#
+                         (~error-handler e#)))]
+                body')]
     `(defn ~name ~@defdoc ~arglist'
-       (let [~(second (first arglist)) (resolve-coeffects ~(vec (rest arglist'))
-                                                          ~(second (first arglist))
-                                                          ~coeffects)]
-         ~@body))))
+       ~@body')))
+
+
 
 (defmacro defcoeffectual
   {:arglists '([name dispatch-val docstring? arglist coeffects? & body])}
@@ -91,9 +102,20 @@
 
              arglist'  (s/unform ::fn-args arglist)
              defdoc    (cond-> [] docstring (conj docstring))
-             coeffects (params->coeffects params)]
+             coeffects (params->coeffects params)
+             ctx-name  (second (first arglist))
+             body'     `[(let [~ctx-name (resolve-coeffects ~(vec (rest arglist'))
+                                                            ~ctx-name
+                                                            ~(dissoc coeffects :coeffectual/error))]
+                           ~@body)]
+             body'     (if-let [error-handler (:coeffectual/error coeffects)]
+                         [`(try ~@body'
+                                (catch Exception e#
+                                  (~error-handler e#)))]
+                         body')]
          `(defmethod ~name ~dispatch-val ~@defdoc ~arglist'
-            (let [~(second (first arglist)) (resolve-coeffects ~(vec (rest arglist'))
-                                                               ~(second (first arglist))
-                                                               ~coeffects)]
-              ~@body))))
+            ~@body')))
+
+
+(defmulti m3 (fn [_context m]
+               (:type m)))
