@@ -1,5 +1,6 @@
 (ns coeffectual.core
-  (:require [clojure.spec.alpha :as s]))
+  (:require [clojure.spec.alpha :as s]
+            [clojure.tools.logging :as log]))
 
 (s/def ::map-destructure-optionals
   (s/tuple #{:or} (s/map-of simple-symbol? any?)))
@@ -69,6 +70,9 @@
            context)))
 
 
+(defn get-coeffects [v]
+  (-> v meta :coeffects))
+
 
 (defmacro defc
   {:arglists '([name docstring? arglist coeffects? & body])}
@@ -87,9 +91,13 @@
         body' (if-let [error-handler (:coeffectual/error coeffects)]
                 [`(try ~@body'
                        (catch Exception e#
+                         (log/error "error:" e#)
+                         (~error-handler e#))
+                       (catch AssertionError e#
+                         (log/error "error:" e#)
                          (~error-handler e#)))]
                 body')]
-    `(defn ~name ~@defdoc ~arglist'
+    `(defn ~name ~{:coeffects (dissoc coeffects :coeffectual/error)} ~@defdoc ~arglist'
        ~@body')))
 
 
@@ -111,11 +119,11 @@
              body'     (if-let [error-handler (:coeffectual/error coeffects)]
                          [`(try ~@body'
                                 (catch Exception e#
-                                  (~error-handler e#)))]
+                                  (log/error "error:" e#))
+                                (catch AssertionError e#
+                                  (log/error "error:" e#)
+                                  (~error-handler e#))
+                                (~error-handler e#))]
                          body')]
          `(defmethod ~name ~dispatch-val ~@defdoc ~arglist'
             ~@body')))
-
-
-(defmulti m3 (fn [_context m]
-               (:type m)))
