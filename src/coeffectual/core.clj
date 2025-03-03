@@ -105,7 +105,7 @@
 (defmacro defcoeffectual
   {:arglists '([name dispatch-val docstring? arglist coeffects? & body])}
   [& args]
-  #dbg (let [{:keys [name dispatch-val docstring arglist coeffects body] :as params}
+  (let [{:keys [name dispatch-val docstring arglist coeffects body] :as params}
              (s/conform ::defcoeffectual-args args)
 
              arglist'  (s/unform ::fn-args arglist)
@@ -119,11 +119,12 @@
              body'     (if-let [error-handler (:coeffectual/error coeffects)]
                          [`(try ~@body'
                                 (catch Exception e#
-                                  (log/error "error:" e#))
+                                  (log/error "error:" e#)
+                                  (~error-handler e#))
                                 (catch AssertionError e#
                                   (log/error "error:" e#)
                                   (~error-handler e#))
-                                (~error-handler e#))]
+                                )]
                          body')]
          `(defmethod ~name ~dispatch-val ~@defdoc ~arglist'
             ~@body')))
