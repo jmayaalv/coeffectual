@@ -1,0 +1,5 @@
+{:linters {:clojure-lsp/unused-public-var {:level   :warning
+                                           :exclude #{user}}
+           :unsorted-required-namespaces  {:level :warning}}
+ :lint-as {coeffectual.core/defcoeffectual clojure.core/defmethod
+           coeffectual.core/defc           clojure.core/defn}}
