@@ -20,7 +20,7 @@
           ;; Define test effects (intentionally out of order)
           test-effects {:email  {:data "Send email"}
                         :http   {:url "https://example.com"}
-                        :db     {:query "SELECT * FROM users"}
+                        :db     ["insert into ...?" 1]
                         :custom {:action "do-something"}}]
 
       ;; Execute the effects
@@ -31,7 +31,7 @@
              (map first @executed-effects)))
 
       ;; Verify the effect data was passed correctly
-      (is (= {:effect/type :http, :url "https://example.com"}
+      (is (= {:url "https://example.com"}
              (:http (into {} (map (fn [[type effect]] [type effect]) @executed-effects)))))
 
       ;; Verify context was passed to han dlers

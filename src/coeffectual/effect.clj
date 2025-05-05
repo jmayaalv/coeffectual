@@ -21,17 +21,17 @@
 
 (defn- io-comparator [order]
   (fn [effect1 effect2]
-     (compare (get order  (:effect/type effect1) 0)
-             (get order (:effect/type effect2) 0))))
+    (compare (get order  (:effect/type (meta effect1)) 0)
+             (get order (:effect/type (meta effect2)) 0))))
 
 (defn- execute-effect! [context effect]
-  (if-let [handler! (get @!effect->handler (:effect/type effect))]
+  (if-let [handler! (get @!effect->handler (:effect/type (meta effect)))]
     (handler! context effect)
-    (throw (ex-info (str "No effect handler found for " (:effect/type effect)) effect))))
+    (throw (ex-info (str "No effect handler found for " (:effect/type (meta effect))) effect))))
 
 (defn execute-effects! [context effects]
   (->> effects
        (map (fn [[k effect]]
-              (assoc effect :effect/type k)))
+              (with-meta effect {:effect/type k})))
        (into (sorted-set-by (io-comparator default-order)))
        (run! (partial execute-effect! context))))
