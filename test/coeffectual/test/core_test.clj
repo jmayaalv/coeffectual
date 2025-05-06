@@ -17,14 +17,10 @@
   {:z (constantly 10)}
   (+ x y (:z ctx)))
 
-(defc f3
-  [ctx x y]
-  {:z (constantly 10)}
-  (+ x y (:z ctx)))
 
 (defc with-error
   [ctx x y]
-  {:z                 (constantly (throw (ex-info "error" {})))
+  {:z                 (fn [_ _ _] (throw (ex-info "error" {})))
    :coeffectual/error (fn [_error]
                        :error)}
   (+ x y (:z ctx)))
