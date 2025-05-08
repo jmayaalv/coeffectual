@@ -1,81 +1,162 @@
-# coeffectual
+# Coeffectual
 
-Coeffectual is a Clojure library that enhances function and multimethod definitions by introducing "coeffects." Coeffects are side-input computations that enrich the context passed to a function, providing a structured and declarative way to manage context enrichment.
+A lightweight, composable Clojure library for managing side effects and dependencies using the coeffect/effect pattern.
 
-## Usage 
+## Overview
 
-### defc Macro (Functions with Coeffects)
+Coeffectual provides a clean separation between your pure application logic and the side effects it produces. Inspired by patterns found in re-frame, this library helps you structure your Clojure applications with clear boundaries between:
 
-The defc macro defines regular functions with coeffects.
+- **Coeffects**: Values from the outside world that your application needs
+- **Effects**: Actions your application wants to perform on the outside world
 
-Syntax:
+Think of coeffects as the inputs your functions need from external sources, and effects as the outputs your functions want to send to external systems.
 
-```Clojure
+## Installation
 
-(defc function-name
-  [context-arg arg1 arg2 ...]
-  {coeffect-key1 (fn [context-arg arg1 arg2 ...] ...)
-   coeffect-key2 (fn [context-arg arg1 arg2 ...] ...)
-   ...}
-  body...)
+Add this to your deps.edn:
+
+```clojure
+{:deps {coeffectual/coeffectual   {:mvn/version "0.1.0"}}}
 ```
-Example:
 
-```Clojure
+## Concepts
 
-(ns example
-  (:require [coeffectual :refer [defc]]))
+### Coeffects
 
-(defc my-func
-  [ctx x]
-  {:y (fn [ctx x] (* x 2))
-   :z (fn [ctx x] (+ (:y ctx) 3))}
-  (+ (:y ctx) (:z ctx) x))
+Coeffects represent the process of gathering input from external sources. They are functions that take a context and return a value.
 
-(println (my-func {:initial-val 10} 5)) ; Output: 23
+```clojure
+;; Define a coeffect handler for getting the current time
+(def get-current-time
+  (fn [_context]
+    (java.time.Instant/now)))
+
+;; Use the coeffect in your system
+(resolve-cofx! {:coeffects {}} {:time get-current-time})
+;; => {:time #object[java.time.Instant 0x4c5f5fa6 "2025-05-08T10:30:15.123Z"]}
 ```
-In this example:
 
-my-func takes a context map (ctx) and an argument x.
-The coeffects map defines two coeffects: :y and :z.
-The coeffect functions calculate values that are merged into the ctx map.
-The function body uses the enriched ctx map.
+### Effects
 
-### defcoeffectual Macro (Multimethods with Coeffects)
-The defcoeffectual macro defines multimethods with coeffects.
+Effects represent actions to be performed on the outside world. They are registered handlers that execute side effects in a controlled manner.
 
-Syntax:
+```clojure
+;; Register an effect handler for HTTP requests
+(register-fx! :http
+  (fn [_context effect]
+    (http-client/request effect)))
 
-```Clojure
-
-(defcoeffectual multimethod-name dispatch-val
-  [context-arg arg1 arg2 ...]
-  {coeffect-key1 (fn [context-arg arg1 arg2 ...] ...)
-   coeffect-key2 (fn [context-arg arg1 arg2 ...] ...)
-   ...}
-  body...)
+;; Execute effects
+(execute-fx! context {:http {:method :get :url "https://example.com"}
+                      :db {:op :insert :table :users :values {...}}})
 ```
-Example:
-
-```Clojure
-
-(ns example
-  (:require [coeffectual :refer [defcoeffectual]]))
-
-(defmulti my-multi (fn [_context m]
-               (:type m)))
-
-(defcoeffectual my-multi :test
-  [ctx {:keys [x]}]
-  {:y (constantly 10)}
-  (+ x (:y ctx)))
-
-(m1 {} {:type :test :x 5}) => 15
-
-```
-.
 
 ## Key Features
-Context Enrichment: Coeffects allow you to pre-process data or perform computations before the main function body is executed.
-Purity: Coeffect functions can be pure, ensuring predictable behavior.
-Declarative Syntax: Provides a clear and concise way to define functions and multimethods with coeffects.
+
+- **Composable Coeffects**: Coeffects can access the context and other coeffects
+- **Clean Separation**: Keep your core logic pure by isolating side effects
+- **Testable**: Easy to test your application logic by mocking coeffects and effects
+
+## Usage Example
+
+```clojure
+(ns my-app.core
+  (:require [coeffectual.core :refer [resolve-cofx! execute-fx! register-fx!]]))
+
+;; Register effect handlers
+(register-fx! :http http-handler)
+(register-fx! :db db-handler)
+
+;; Define coeffect handlers
+(def coeffects
+  {:db (fn [_] (get-from-database))
+   :user-id (fn [ctx] (get-in ctx [:request :params :user-id]))})
+
+;; In your application flow
+(defn process-request [request]
+  (let [context {:request request :coeffects {}}
+        ;; Gather all required inputs
+        coeffects (resolve-cofx! context coeffects)
+        ;; Process with your pure business logic
+        result (my-business-logic coeffects)
+        ;; Extract side effects to perform
+        effects (:effects result)]
+    ;; Execute all side effects in proper order
+    (execute-fx! context effects)
+    ;; Return the response
+    (:response result)))
+```
+
+## Full Application Flow
+
+Using the `execute!` function provides a complete flow:
+
+```clojure
+(ns my-app.handler
+  (:require [coeffectual.core :as cf]))
+
+(defn handle-user-registration
+    ;;coeffects
+    ([args]
+     {:request-id (random-uuid)
+      :user       (fn [{:keys [db]}]
+                    (jdbc/query db ["select * From user where email = ?" (:email args)]))
+      :now        (fn [_]
+                    (java.time.Instant/now))})
+    ;;business logic
+    ([{:keys [request-id user now] :as coeffects} user-data]
+     (when (nil? user)
+       [user {:db    ["insert into user ( userid, email, date), values (?, ?, ?)"
+                      request-id (:email user-data) now]
+              :email {:to      (:email user-data)
+                      :subject "Welcome!"
+                      :body    "Thanks for registering."}}])))
+
+;; resolve coeffects and run effects
+(coeffectual/execute! {:db "jdbc:connection"} {:email "test@email.com"} handle-user-registration)
+```
+
+## Testing
+
+The library is designed with testability in mind. You can easily test your logic by providing mock coeffects and verifying the effects that would be produced.
+
+```clojure
+(deftest test-my-logic
+  (let [coeffects {:db mock-db :user "test-user"}
+        result (my-business-logic coeffects args)]
+    (is (= {:db {:op :update :entity 123}}
+           (:effects result)))))
+```
+
+## Effect Execution Order
+
+Effects are executed in a prioritized order defined in `effect.clj`. The default order is:
+
+1. `:http` - Network requests
+2. `:db` - Database operations
+3. `:mq` - Message queue operations
+4. `:csv` - CSV file operations
+5. `:file` - File system operations
+6. `:pdf` - PDF generation
+7. `:notification` - System notifications
+8. `:email` - Email sending
+9. `:slack` - Slack messages
+10. `:event` - Event dispatching
+
+You can override this order for custom effect types as needed.
+
+## Developer Notes
+
+Thinking about coeffects and effects can be challenging at first. Here are some analogies that might help:
+
+- **Coeffects are like ingredients**: Before cooking a meal, you need to gather all ingredients. Coeffects collect all the external inputs your function needs before processing.
+
+- **Effects are like mailing letters**: You write the letters (pure logic), put them in envelopes with addresses (effects), and then the mail carrier (effect handlers) delivers them to their destinations.
+
+- **The whole system is like a functional assembly line**: Raw materials come in (coeffects), get transformed (pure functions), and finished products go out (effects) - with each step clearly separated.
+
+## License
+
+Copyright © 2025
+
+Released under the MIT License.
