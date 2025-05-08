@@ -1,6 +1,4 @@
-(ns coeffectual.effect
-  (:require
-    [coeffectual.effect :as effect]))
+(ns coeffectual.effect)
 
 (defonce !effect->handler (atom {}))
 
