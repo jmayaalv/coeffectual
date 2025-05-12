@@ -26,7 +26,7 @@
     (throw (ex-info (str "No effect handler found for " (:effect/type (meta effect))) effect))))
 
 (defn execute-effects! [context effects]
-  #dbg (->> effects
+  (->> effects
        (map (fn [[k effect]]
               (with-meta effect {:effect/type k})))
        (run! (partial execute-effect! context))))
