@@ -1,4 +1,5 @@
-(ns coeffectual.effect)
+(ns coeffectual.effect
+  (:require [clojure.tools.logging :as log]))
 
 (defonce !effect->handler (atom {}))
 
@@ -21,6 +22,7 @@
 
 
 (defn- execute-effect! [context effect]
+  (log/info "executing effect: " effect)
   (if-let [handler! (handler (:effect/type (meta effect)))]
     (handler! context effect)
     (throw (ex-info (str "No effect handler found for " (:effect/type (meta effect))) effect))))
