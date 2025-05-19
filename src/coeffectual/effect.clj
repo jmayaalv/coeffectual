@@ -22,7 +22,7 @@
 
 
 (defn- execute-effect! [context effect]
-  (log/info "executing effect: " effect)
+  (log/debug "executing effect: " effect)
   (if-let [handler! (handler (:effect/type (meta effect)))]
     (handler! context effect)
     (throw (ex-info (str "No effect handler found for " (:effect/type (meta effect))) effect))))
