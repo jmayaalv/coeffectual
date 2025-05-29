@@ -1,22 +1,25 @@
 (ns coeffectual.middleware)
 
-(defn- execute-handler
-  [context handler]
-  (if (var? handler)
-    ((deref handler) context)
-    (handler context)))
+(defn- get-fn
+  [fn-or-var]
+  (if (var? fn-or-var)
+    (deref fn-or-var)
+    fn-or-var))
 
 (defn wrap-coeffect
   [handler id coeffect-fn]
   (fn [context]
-    (execute-handler (assoc-in context [:coeffects id] (coeffect-fn context))
-                     handler)))
+    (let [handler-fn  (get-fn handler)
+          coeffect-fn (get-fn coeffect-fn)]
+      (handler-fn (assoc-in context
+                            [:coeffects id]
+                            (coeffect-fn context))))))
 
 
 (defn wrap-handler
   [handler]
   (fn [context]
-    (execute-handler (assoc (:coeffects context)
-                            :command
-                            (:command context))
-                     handler)))
+    (let [handler-fn (get-fn handler)]
+     (handler-fn (assoc (:coeffects context)
+                        :command
+                        (:command context))))))
