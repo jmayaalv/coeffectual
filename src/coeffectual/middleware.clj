@@ -9,7 +9,7 @@
 (defn wrap-coeffect
   [handler id coeffect-fn]
   (fn [context]
-    (execute-handler (assoc context id (coeffect-fn context))
+    (execute-handler (assoc-in context [:coeffects id] (coeffect-fn context))
                      handler)))
 
 
