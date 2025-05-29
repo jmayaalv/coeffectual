@@ -1,6 +1,6 @@
 (ns coeffectual.middleware)
 
-(defn execute-handler
+(defn- execute-handler
   [context handler]
   (if (var? handler)
     ((deref handler) context)
