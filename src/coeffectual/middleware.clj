@@ -13,7 +13,7 @@
                      handler)))
 
 
-(defn wrap-with-handler
+(defn wrap-handler
   [handler]
   (fn [context]
     (execute-handler (assoc (:coeffects context)
