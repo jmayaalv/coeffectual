@@ -11,3 +11,12 @@
   (fn [context]
     (execute-handler (assoc context id (coeffect-fn context))
                      handler)))
+
+
+(defn wrap-with-handler
+  [handler]
+  (fn [context]
+    (execute-handler (assoc (:coeffects context)
+                            :command
+                            (:command context))
+                     handler)))
