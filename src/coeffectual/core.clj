@@ -12,7 +12,7 @@
 (def register-fx! effect/register-effect!)
 
 (defn execute! [context args f]
-  (let [coeffects (resolve-cofx! context (f args))
+  (let [coeffects (cofx/resolve-coeffects! context (f args))
         effects   (f coeffects args)]
     (if (map? effects)
       (do (execute-fx! context (:effects effects))
